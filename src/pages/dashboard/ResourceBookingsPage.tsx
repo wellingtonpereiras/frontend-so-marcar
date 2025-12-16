@@ -72,7 +72,7 @@ export default function ResourceBookingsPage() {
     },
   });
 
-  const handleEdit = (booking: ResourceBooking) => {
+  const handleEdit = (booking: Appointment) => {
     setEditingBooking(booking);
     setFormOpen(true);
   };
@@ -106,12 +106,13 @@ export default function ResourceBookingsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-      case 'scheduled':
         return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
       case 'completed':
         return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
       case 'cancelled':
         return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'no_show':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
       default:
         return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
@@ -119,10 +120,10 @@ export default function ResourceBookingsPage() {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      scheduled: 'Agendado',
       confirmed: 'Confirmado',
       completed: 'Concluído',
       cancelled: 'Cancelado',
+      no_show: 'Não Compareceu',
     };
     return labels[status] || status;
   };
@@ -238,31 +239,31 @@ export default function ResourceBookingsPage() {
                     {filteredBookings.map((booking) => {
                     console.log({booking});
                     
-                    const duration = booking.endTime && booking.startTime
-                      ? `${parseInt(booking.endTime.split(':')[0]) - parseInt(booking.startTime.split(':')[0])}h`
+                    const duration = booking.endTime && booking.scheduledTime
+                      ? `${parseInt(booking.endTime.split(':')[0]) - parseInt(booking.scheduledTime.split(':')[0])}h`
                       : '-';
+                    
+                    // Calcular totalPrice baseado em durationMinutes e hourlyRate
+                    const totalPrice = booking.resource?.isFree 
+                      ? 0 
+                      : (booking.durationMinutes / 60) * (booking.resource?.hourlyRate || 0);
 
                     return (
                       <TableRow key={booking.id}>
                         <TableCell>
                           <div className="text-sm">
                             <div className="font-medium">
-                              {format(new Date(booking.bookingDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                              {format(new Date(booking.scheduledDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                             </div>
                             <div className="text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {booking.startTime} - {booking.endTime}
+                              {booking.scheduledTime} - {booking.endTime}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
                             <div className="font-medium">{booking.resource?.name}</div>
-                            {booking.recurrencePattern && (
-                              <div className="text-xs text-muted-foreground">
-                                Recorrente
-                              </div>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -276,7 +277,7 @@ export default function ResourceBookingsPage() {
                           {booking.resource?.isFree ? (
                             <span className="text-green-600 font-medium">Grátis</span>
                           ) : (
-                            `R$ ${booking.totalPrice.toFixed(2)}`
+                            `R$ ${totalPrice.toFixed(2)}`
                           )}
                         </TableCell>
                         <TableCell>
@@ -296,7 +297,7 @@ export default function ResourceBookingsPage() {
                             </Button>
                             <Button
                               onClick={() => completeMutation.mutate(booking.id)}
-                              disabled={booking.status !== 'scheduled' && booking.status !== 'confirmed'}
+                              disabled={booking.status !== 'confirmed'}
                               title="Concluir"
                               variant="outline"
                             >

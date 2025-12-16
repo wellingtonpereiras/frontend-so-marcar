@@ -18,26 +18,16 @@ interface ResourceBookingFormProps {
   booking?: Appointment | null; // Mudado de ResourceBooking para Appointment
 }
 
-const RECURRENCE_PATTERNS = [
-  { value: '', label: 'Sem recorrência' },
-  { value: 'daily', label: 'Diária' },
-  { value: 'weekly', label: 'Semanal' },
-  { value: 'biweekly', label: 'Quinzenal' },
-  { value: 'monthly', label: 'Mensal' },
-];
-
 export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingFormProps) {
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
 
   const [resourceId, setResourceId] = useState('');
   const [customerId, setCustomerId] = useState('');
-  const [bookingDate, setBookingDate] = useState('');
-  const [startTime, setStartTime] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
-  const [recurrencePattern, setRecurrencePattern] = useState('');
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
   const { data: resources = [] } = useQuery({
     queryKey: ['resources', user?.establishmentId],
@@ -53,27 +43,23 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
 
   useEffect(() => {
     if (booking) {
-      setResourceId(booking.resourceId);
+      setResourceId(booking.resourceId || '');
       setCustomerId(booking.customerId);
-      setBookingDate(booking.bookingDate);
-      setStartTime(booking.startTime);
-      setEndTime(booking.endTime);
+      setScheduledDate(booking.scheduledDate);
+      setScheduledTime(booking.scheduledTime);
+      setEndTime(booking.endTime || '');
       setNotes(booking.notes || '');
-      setRecurrencePattern(booking.recurrencePattern || '');
-      setRecurrenceEndDate(booking.recurrenceEndDate || '');
     } else {
       setResourceId('');
       setCustomerId('');
-      setBookingDate('');
-      setStartTime('');
+      setScheduledDate('');
+      setScheduledTime('');
       setEndTime('');
       setNotes('');
-      setRecurrencePattern('');
-      setRecurrenceEndDate('');
     }
   }, [booking, open]);
 
-  const createMutation = useMutation<Appointment>({
+  const createMutation = useMutation<Appointment, Error, any>({
     mutationFn: (data: any) => resourceBookingsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resource-bookings'] });
@@ -113,23 +99,18 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
       return false;
     }
 
-    if (!bookingDate) {
+    if (!scheduledDate) {
       toast.error('Selecione uma data');
       return false;
     }
 
-    if (!startTime || !endTime) {
+    if (!scheduledTime || !endTime) {
       toast.error('Preencha os horários de início e fim');
       return false;
     }
 
-    if (startTime >= endTime) {
+    if (scheduledTime >= endTime) {
       toast.error('Horário de início deve ser anterior ao horário de fim');
-      return false;
-    }
-
-    if (recurrencePattern && !recurrenceEndDate) {
-      toast.error('Informe a data de término da recorrência');
       return false;
     }
 
@@ -139,13 +120,12 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
   const buildBookingData = () => ({
     resourceId,
     customerId,
-    bookingDate,
-    startTime,
+    scheduledDate,
+    scheduledTime,
     endTime,
+    establishmentId: user!.establishmentId,
+    bookingSource: 'web' as const,
     notes: notes.trim() || undefined,
-    recurrencePattern: recurrencePattern || undefined,
-    recurrenceInterval: recurrencePattern ? 1 : undefined,
-    recurrenceEndDate: recurrencePattern ? recurrenceEndDate : undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -210,8 +190,8 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
             <Input
               id="date"
               type="date"
-              value={bookingDate}
-              onChange={(e) => setBookingDate(e.target.value)}
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
               required
             />
           </div>
@@ -222,8 +202,8 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
               <Input
                 id="startTime"
                 type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
                 required
               />
             </div>
@@ -251,37 +231,7 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
             />
           </div>
 
-          {!booking && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="recurrence">Recorrência</Label>
-                <Select
-                  id="recurrence"
-                  value={recurrencePattern}
-                  onChange={setRecurrencePattern}
-                  options={RECURRENCE_PATTERNS}
-                  placeholder="Sem recorrência"
-                />
-              </div>
 
-              {recurrencePattern && (
-                <div className="grid gap-2">
-                  <Label htmlFor="recurrenceEndDate">Repetir até *</Label>
-                  <Input
-                    id="recurrenceEndDate"
-                    type="date"
-                    value={recurrenceEndDate}
-                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                    required={!!recurrencePattern}
-                    min={bookingDate}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    As reservas serão criadas automaticamente até esta data
-                  </p>
-                </div>
-              )}
-            </>
-          )}
         </form>
       </DialogContent>
       <DialogFooter>
@@ -296,8 +246,6 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
             ? 'Salvando...'
             : booking
             ? 'Atualizar'
-            : recurrencePattern
-            ? 'Criar Reservas'
             : 'Criar'}
         </Button>
       </DialogFooter>
