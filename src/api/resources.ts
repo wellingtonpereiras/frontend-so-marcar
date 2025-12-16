@@ -3,9 +3,7 @@ import type { Resource, CreateResourceDto } from '../types';
 
 export const resourcesApi = {
   async getAll(establishmentId: string): Promise<Resource[]> {
-    const response = await api.get(`/resources`, {
-      params: { establishmentId },
-    });
+    const response = await api.get(`/resources/establishment/${establishmentId}`);
     return response.data;
   },
 
@@ -38,9 +36,54 @@ export const resourcesApi = {
     date: string,
     startTime: string,
     endTime: string
-  ): Promise<{ available: boolean; conflicts?: any[] }> {
+  ): Promise<{
+    available: boolean;
+    currentOccupancy: number;
+    maxCapacity: number;
+    reason: string | null;
+  }> {
     const response = await api.get(`/resources/${resourceId}/availability`, {
       params: { date, startTime, endTime },
+    });
+    return response.data;
+  },
+
+  async getAvailableSlots(
+    resourceId: string,
+    date: string
+  ): Promise<Array<{
+    time: string;
+    available: boolean;
+    currentOccupancy: number;
+  }>> {
+    const response = await api.get(`/resources/${resourceId}/slots`, {
+      params: { date },
+    });
+    return response.data;
+  },
+
+  async getBookings(
+    resourceId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<any[]> {
+    const response = await api.get(`/resources/${resourceId}/bookings`, {
+      params: { startDate, endDate },
+    });
+    return response.data;
+  },
+
+  async getStats(
+    resourceId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<{
+    totalBookings: number;
+    totalHours: number;
+    averageOccupancy: number;
+  }> {
+    const response = await api.get(`/resources/${resourceId}/stats`, {
+      params: { startDate, endDate },
     });
     return response.data;
   },

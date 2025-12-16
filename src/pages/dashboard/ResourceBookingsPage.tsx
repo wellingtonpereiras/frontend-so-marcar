@@ -21,23 +21,26 @@ import {
   TableRow,
 } from '../../components/ui/table';
 import toast from 'react-hot-toast';
-import type { ResourceBooking } from '../../types';
+import type { Appointment } from '../../types';
 
 export default function ResourceBookingsPage() {
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<ResourceBooking | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Appointment | null>(null);
   
   // Filtros
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
   const [resourceFilter, setResourceFilter] = useState<string>('all');
 
-  const { data: bookings = [], isLoading } = useQuery({
+  // TODO: Backend não tem endpoint para listar todas as reservas
+  // Precisa buscar recursos primeiro e depois suas reservas
+  // Por ora, retornando array vazio
+  const { data: bookings = [], isLoading } = useQuery<Appointment[]>({
     queryKey: ['resource-bookings', user?.establishmentId, dateFilter],
-    queryFn: () => resourceBookingsApi.getAll(user!.establishmentId, dateFilter || undefined),
+    queryFn: async () => [],
     enabled: !!user?.establishmentId,
   });
 
@@ -232,7 +235,9 @@ export default function ResourceBookingsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBookings.map((booking) => {
+                    {filteredBookings.map((booking) => {
+                    console.log({booking});
+                    
                     const duration = booking.endTime && booking.startTime
                       ? `${parseInt(booking.endTime.split(':')[0]) - parseInt(booking.startTime.split(':')[0])}h`
                       : '-';
@@ -242,7 +247,7 @@ export default function ResourceBookingsPage() {
                         <TableCell>
                           <div className="text-sm">
                             <div className="font-medium">
-                              {format(new Date(booking.bookingDate), 'dd/MM/yyyy', { locale: ptBR })}
+                              {format(new Date(booking.bookingDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                             </div>
                             <div className="text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />

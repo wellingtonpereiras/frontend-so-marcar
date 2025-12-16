@@ -69,10 +69,12 @@ export interface Appointment {
   id: string;
   establishmentId: string;
   customerId: string;
-  professionalId: string;
-  serviceId: string;
-  scheduledDate: string;
-  scheduledTime: string;
+  professionalId?: string; // Opcional se for reserva de recurso
+  serviceId?: string; // Opcional se for reserva de recurso
+  resourceId?: string; // Para reservas de recursos (salas/espaços)
+  scheduledDate: string; // YYYY-MM-DD
+  scheduledTime: string; // HH:mm
+  endTime?: string; // HH:mm - Obrigatório para recursos
   durationMinutes: number;
   status: 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   notes?: string;
@@ -82,18 +84,22 @@ export interface Appointment {
   customer?: Customer;
   professional?: Professional;
   service?: Service;
+  resource?: Resource; // Adicionado para reservas de recursos
   createdAt: string;
 }
 
 export interface CreateAppointmentDto {
   establishmentId: string;
   customerId: string;
-  professionalId: string;
-  serviceId: string;
+  professionalId?: string; // Opcional se resourceId estiver presente
+  serviceId?: string; // Opcional se resourceId estiver presente
+  resourceId?: string; // Para reservas de recursos
   scheduledDate: string;
   scheduledTime: string;
+  endTime?: string; // Obrigatório quando resourceId está presente
   durationMinutes: number;
   notes?: string;
+  bookingSource?: 'manual' | 'whatsapp_bot' | 'web';
 }
 
 export interface BusinessHours {
@@ -120,55 +126,29 @@ export interface Resource {
   establishmentId: string;
   name: string;
   description?: string;
-  type: string; // 'meeting_room', 'sports_court', 'studio', etc
-  capacity: number;
-  hourlyRate?: number; // null se for gratuito
-  isFree: boolean;
+  capacity: number; // Capacidade máxima de pessoas/reservas simultâneas
+  isShared: boolean; // Se permite múltiplas reservas simultâneas
+  hourlyRate: number; // Valor por hora em reais
+  isFree: boolean; // Se o agendamento é gratuito
+  amenities?: string[]; // Comodidades disponíveis (wifi, projetor, etc)
+  cancellationHours: number; // Horas mínimas de antecedência para cancelamento
+  allowedDurations: number[]; // Durações permitidas em minutos [60, 120, 240, 480]
   isActive: boolean;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface CreateResourceDto {
   establishmentId: string;
   name: string;
   description?: string;
-  type: string;
   capacity: number;
-  hourlyRate?: number;
+  isShared: boolean;
+  hourlyRate: number;
   isFree: boolean;
-  isActive?: boolean;
+  amenities?: string[];
+  cancellationHours: number;
+  allowedDurations: number[]; // [60, 120, 240, 480]
 }
 
-// Resource Bookings (Reservas de Espaços)
-export interface ResourceBooking {
-  id: string;
-  resourceId: string;
-  customerId: string;
-  bookingDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
-  totalPrice: number;
-  notes?: string;
-  // Recorrência
-  recurrencePattern?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  recurrenceInterval?: number;
-  recurrenceEndDate?: string;
-  parentBookingId?: string;
-  // Relações
-  resource?: Resource;
-  customer?: Customer;
-  createdAt: string;
-}
-
-export interface CreateResourceBookingDto {
-  resourceId: string;
-  customerId: string;
-  bookingDate: string;
-  startTime: string;
-  endTime: string;
-  notes?: string;
-  recurrencePattern?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  recurrenceInterval?: number;
-  recurrenceEndDate?: string;
-}
+// Resource Bookings são tratados como Appointments com resourceId
+// Não existe entidade separada no backend

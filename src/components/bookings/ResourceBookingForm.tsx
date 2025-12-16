@@ -10,12 +10,12 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Select } from '../ui/select';
 import toast from 'react-hot-toast';
-import type { ResourceBooking } from '../../types';
+import type { Appointment } from '../../types';
 
 interface ResourceBookingFormProps {
   open: boolean;
   onClose: () => void;
-  booking?: ResourceBooking | null;
+  booking?: Appointment | null; // Mudado de ResourceBooking para Appointment
 }
 
 const RECURRENCE_PATTERNS = [
@@ -73,18 +73,12 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
     }
   }, [booking, open]);
 
-  const createMutation = useMutation<ResourceBooking | ResourceBooking[], unknown, any>({
-    mutationFn: (data: any) =>
-      recurrencePattern
-        ? resourceBookingsApi.createRecurring(data)
-        : resourceBookingsApi.create(data),
+  const createMutation = useMutation<Appointment>({
+    mutationFn: (data: any) => resourceBookingsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resource-bookings'] });
-      toast.success(
-        recurrencePattern
-          ? 'Reservas recorrentes criadas com sucesso!'
-          : 'Reserva criada com sucesso!'
-      );
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Reserva criada com sucesso!');
       onClose();
     },
     onError: (error: any) => {
@@ -98,6 +92,7 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
       resourceBookingsApi.update(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resource-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast.success('Reserva atualizada com sucesso!');
       onClose();
     },

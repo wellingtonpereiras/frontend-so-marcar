@@ -73,18 +73,6 @@ export default function ResourcesPage() {
     setEditingResource(null);
   };
 
-  const getResourceTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      meeting_room: 'Sala de Reunião',
-      sports_court: 'Quadra Esportiva',
-      studio: 'Estúdio',
-      office: 'Escritório',
-      equipment: 'Equipamento',
-      other: 'Outro',
-    };
-    return types[type] || type;
-  };
-
   if (isLoading) {
     return <div className="text-center py-12">Carregando...</div>;
   }
@@ -126,7 +114,7 @@ export default function ResourcesPage() {
                   <div className="flex-1">
                     <CardTitle className="text-lg">{resource.name}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {getResourceTypeLabel(resource.type)}
+                      {resource.isShared ? 'Compartilhado' : 'Exclusivo'} • Capacidade: {resource.capacity}
                     </p>
                   </div>
                   <span
@@ -161,7 +149,7 @@ export default function ResourcesPage() {
                   ) : (
                     <div className="flex items-center gap-2 text-sm">
                       <DollarSign className="w-4 h-4 text-muted-foreground" />
-                      <span>R$ {resource.hourlyRate?.toFixed(2)}/hora</span>
+                      <span>R$ {resource.hourlyRate}/hora</span>
                     </div>
                   )}
                 </div>
