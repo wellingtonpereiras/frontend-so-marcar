@@ -117,16 +117,24 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
     return true;
   };
 
-  const buildBookingData = () => ({
-    resourceId,
-    customerId,
-    scheduledDate,
-    scheduledTime,
-    endTime,
-    establishmentId: user!.establishmentId,
-    bookingSource: 'web' as const,
-    notes: notes.trim() || undefined,
-  });
+  const buildBookingData = () => {
+    // Calcular durationMinutes baseado em scheduledTime e endTime
+    const [startHour, startMin] = scheduledTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+
+    return {
+      resourceId,
+      customerId,
+      scheduledDate,
+      scheduledTime,
+      endTime,
+      durationMinutes,
+      establishmentId: user!.establishmentId,
+      bookingSource: 'web' as const,
+      notes: notes.trim() || undefined,
+    };
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
