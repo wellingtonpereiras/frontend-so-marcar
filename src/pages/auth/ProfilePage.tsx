@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const isOwner = user?.role === 'OWNER' || user?.role === 'owner';
+  const isOwner = user?.role === 'owner';
 
   // Estados para dados pessoais
   const [personalData, setPersonalData] = useState({
@@ -208,7 +208,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
             <Shield className="w-4 h-4" />
             <span className="text-sm font-medium">
-              {profile?.role === 'OWNER' ? 'Proprietário' : profile?.role === 'ADMIN' ? 'Administrador' : 'Funcionário'}
+              {profile?.role === 'owner' ? 'Proprietário' : profile?.role === 'admin' ? 'Administrador' : 'Funcionário'}
             </span>
           </div>
         </div>
@@ -306,8 +306,8 @@ export default function ProfilePage() {
                 <Input
                   id="role"
                   type="text"
-                  value={profile?.role === 'OWNER' ? 'Proprietário' : 
-                         profile?.role === 'ADMIN' ? 'Administrador' : 'Funcionário'}
+                  value={profile?.role === 'owner' ? 'Proprietário' : 
+                         profile?.role === 'admin' ? 'Administrador' : 'Funcionário'}
                   disabled
                   className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
                 />
