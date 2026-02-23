@@ -12,7 +12,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import type { Appointment } from '../../types';
 import { Button } from '../../components/ui/button';
-import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 
 export default function AppointmentsPage() {
   const user = useAuthStore((state) => state.user);

@@ -17,7 +17,7 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [metadata, setMetadata] = useState<any>(null); // Armazena dados analíticos para profissionais
+  // const [metadata, setMetadata] = useState<any>(null); // Armazena dados analíticos para profissionais
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -99,9 +99,9 @@ export function ChatWidget() {
         }
         
         // Armazenar metadata para possível visualização
-        if (response.metadata) {
-          setMetadata(response.metadata);
-        }
+        // if (response.metadata) {
+        //   setMetadata(response.metadata);
+        // }
       } else {
         console.error('Resposta inválida:', response);
         toast.error('Resposta do bot inválida');
@@ -182,7 +182,7 @@ export function ChatWidget() {
     setMessages([]);
     setConversationId(null);
     setSuggestions([]);
-    setMetadata(null);
+    // setMetadata(null);
   };
 
   if (!isOpen) {

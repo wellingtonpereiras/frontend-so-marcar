@@ -1,5 +1,3 @@
-import * as React from "react";
-
 type Option = { value: string; label: string; subtitle?: string };
 
 type SelectProps = {
