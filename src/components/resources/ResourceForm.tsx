@@ -44,7 +44,13 @@ export function ResourceForm({ open, onClose, resource }: ResourceFormProps) {
       setIsFree(resource.isFree);
       setHourlyRate(resource.hourlyRate || 0);
       setCancellationHours(resource.cancellationHours || 24);
-      setSelectedDurations(resource.allowedDurations || [60, 120]);
+      
+      // Garantir que allowedDurations sejam apenas números únicos e válidos
+      const validValues = ALLOWED_DURATIONS.map(d => Number(d.value));
+      const durations = resource.allowedDurations || [60, 120];
+      const uniqueDurations = Array.from(new Set(durations.map(d => Number(d))))
+        .filter(d => validValues.includes(d)); // Filtrar apenas valores válidos
+      setSelectedDurations(uniqueDurations.length > 0 ? uniqueDurations : [60, 120]);
     } else {
       setName('');
       setDescription('');
@@ -106,17 +112,22 @@ export function ResourceForm({ open, onClose, resource }: ResourceFormProps) {
     return true;
   };
 
-  const buildResourceData = () => ({
-    establishmentId: user!.establishmentId,
-    name: name.trim(),
-    description: description.trim() || undefined,
-    capacity,
-    isShared,
-    isFree,
-    hourlyRate: isFree ? 0 : hourlyRate,
-    cancellationHours,
-    allowedDurations: selectedDurations,
-  });
+  const buildResourceData = () => {
+    // Garantir que allowedDurations seja array de números únicos e ordenados
+    const uniqueDurations = Array.from(new Set(selectedDurations.map(d => Number(d)))).sort((a, b) => a - b);
+    
+    return {
+      establishmentId: user!.establishmentId,
+      name: name.trim(),
+      description: description.trim() || undefined,
+      capacity,
+      isShared,
+      isFree,
+      hourlyRate: isFree ? 0 : hourlyRate,
+      cancellationHours,
+      allowedDurations: uniqueDurations,
+    };
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

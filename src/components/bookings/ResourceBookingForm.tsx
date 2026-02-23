@@ -161,7 +161,7 @@ export function ResourceBookingForm({ open, onClose, booking }: ResourceBookingF
           {booking ? 'Editar Reserva' : 'Nova Reserva'}
         </DialogTitle>
       </DialogHeader>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="resource">Recurso *</Label>

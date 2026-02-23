@@ -1,0 +1,97 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Job 1: Validação e Testes
+  validate:
+    name: Validate & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Type check
+        run: npm run build
+      
+      - name: Check bundle size
+        run: |
+          npm run build
+          du -sh dist
+          if [ $(du -s dist | cut -f1) -gt 5000 ]; then
+            echo "⚠️ Build size is too large!"
+            exit 1
+          fi
+
+  # Job 2: Build e Deploy
+  deploy:
+    name: Build & Deploy
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
+        run: npm run build
+      
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+
+  # Job 3: Lighthouse CI (Performance)
+  lighthouse:
+    name: Lighthouse Audit
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://so-marcar.vercel.app
+          uploadArtifacts: true
+          temporaryPublicStorage: true

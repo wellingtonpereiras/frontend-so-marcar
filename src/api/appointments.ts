@@ -33,4 +33,14 @@ export const appointmentsApi = {
     const { data } = await api.patch(`/appointments/${id}/complete`);
     return data;
   },
+
+  approve: async (id: string): Promise<Appointment> => {
+    const { data } = await api.patch(`/appointments/${id}/approve`);
+    return data;
+  },
+
+  reject: async (id: string): Promise<Appointment> => {
+    const { data } = await api.patch(`/appointments/${id}/reject`);
+    return data;
+  },
 };

@@ -1,334 +1,430 @@
-import { useState, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { resourceBookingsApi } from '../../api/resourceBookings';
-import { resourcesApi } from '../../api/resources';
+import { appointmentsApi } from '../../api/appointments';
 import { useAuthStore } from '../../stores/authStore';
-import { Plus, Pencil, X, CheckCircle, Calendar, Clock, Filter } from 'lucide-react';
+import { Calendar, Clock, User, Phone, MapPin, DollarSign, CheckCircle, XCircle, Loader2, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ResourceBookingForm } from '../../components/bookings/ResourceBookingForm';
-import { Card, CardContent } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Select } from '../../components/ui/select';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../components/ui/table';
 import toast from 'react-hot-toast';
-import type { Appointment } from '../../types';
+import { useAppointmentsSocket } from '../../hooks/useAppointmentsSocket';
 
 export default function ResourceBookingsPage() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<Appointment | null>(null);
-  
-  // Filtros
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('');
-  const [resourceFilter, setResourceFilter] = useState<string>('all');
-
-  // TODO: Backend não tem endpoint para listar todas as reservas
-  // Precisa buscar recursos primeiro e depois suas reservas
-  // Por ora, retornando array vazio
-  const { data: bookings = [], isLoading } = useQuery<Appointment[]>({
-    queryKey: ['resource-bookings', user?.establishmentId, dateFilter],
-    queryFn: async () => [],
+  // Buscar todos os agendamentos
+  const { data: appointments = [], isLoading, error } = useQuery({
+    queryKey: ['appointments', user?.establishmentId],
+    queryFn: () => appointmentsApi.getAll(user?.establishmentId || ''),
     enabled: !!user?.establishmentId,
   });
 
-  const { data: resources = [] } = useQuery({
-    queryKey: ['resources', user?.establishmentId],
-    queryFn: () => resourcesApi.getAll(user!.establishmentId),
+  // Filtrar apenas reservas de recursos (têm resourceId)
+  const resourceBookings = appointments.filter(apt => apt.resourceId);
+
+  // Aplicar filtro de status
+  const filteredBookings = resourceBookings.filter(booking => {
+    if (filter === 'all') return true;
+    if (filter === 'pending') return booking.status === 'pending';
+    if (filter === 'approved') return booking.status === 'confirmed';
+    if (filter === 'rejected') return booking.status === 'rejected';
+    return true;
+  });
+
+  // Contar por status
+  const pendingCount = resourceBookings.filter(b => b.status === 'pending').length;
+  const approvedCount = resourceBookings.filter(b => b.status === 'confirmed').length;
+  const rejectedCount = resourceBookings.filter(b => b.status === 'rejected').length;
+
+  // Função para tocar som de notificação
+  const playNotificationSound = useCallback(() => {
+    try {
+      const audio = new Audio('/notification.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(err => console.log('Som de notificação não disponível:', err));
+    } catch (err) {
+      // Som não disponível, ignorar
+    }
+  }, []);
+
+  // Callbacks memoizadas para evitar reconexões do WebSocket
+  const handleNewBooking = useCallback((appointment: any) => {
+    console.log('🆕 Nova solicitação recebida em tempo real!', appointment);
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    toast.success(
+      `Nova solicitação de reserva!\n${appointment.customer?.name || 'Cliente'} - ${appointment.resource?.name || 'Recurso'}`,
+      { duration: 5000, icon: '🔔' }
+    );
+    playNotificationSound();
+  }, [queryClient, playNotificationSound]);
+
+  const handleBookingApproved = useCallback((appointment: any) => {
+    console.log('✅ Reserva aprovada!', appointment);
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+  }, [queryClient]);
+
+  const handleBookingRejected = useCallback((appointment: any) => {
+    console.log('❌ Reserva rejeitada!', appointment);
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+  }, [queryClient]);
+
+  const handleBookingCancelled = useCallback((appointment: any) => {
+    console.log('🚫 Reserva cancelada!', appointment);
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    toast(`Reserva cancelada: ${appointment.resource?.name || 'Recurso'}`);
+  }, [queryClient]);
+
+  const handleBookingUpdated = useCallback((appointment: any) => {
+    console.log('🔄 Reserva atualizada!', appointment);
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+  }, [queryClient]);
+
+  // WebSocket para notificações em tempo real
+  const { isConnected, isSubscribed } = useAppointmentsSocket({
+    establishmentId: user?.establishmentId || '',
     enabled: !!user?.establishmentId,
+    onNewBooking: handleNewBooking,
+    onBookingApproved: handleBookingApproved,
+    onBookingRejected: handleBookingRejected,
+    onBookingCancelled: handleBookingCancelled,
+    onBookingUpdated: handleBookingUpdated,
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: (id: string) => resourceBookingsApi.cancel(id),
+
+
+  // Mutation para aprovar
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => appointmentsApi.approve(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-bookings'] });
-      toast.success('Reserva cancelada com sucesso!');
+      toast.success('Reserva aprovada com sucesso! 🎉');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
-    onError: () => {
-      toast.error('Erro ao cancelar reserva');
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Erro ao aprovar reserva';
+      toast.error(message);
     },
   });
 
-  const completeMutation = useMutation({
-    mutationFn: (id: string) => resourceBookingsApi.complete(id),
+  // Mutation para rejeitar
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => appointmentsApi.reject(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-bookings'] });
-      toast.success('Reserva concluída com sucesso!');
+      toast.success('Reserva rejeitada');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
-    onError: () => {
-      toast.error('Erro ao concluir reserva');
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Erro ao rejeitar reserva';
+      toast.error(message);
     },
   });
 
-  const handleEdit = (booking: Appointment) => {
-    setEditingBooking(booking);
-    setFormOpen(true);
-  };
-
-  const handleCloseForm = () => {
-    setFormOpen(false);
-    setEditingBooking(null);
-  };
-
-  const handleClearFilters = () => {
-    setStatusFilter('all');
-    setDateFilter('');
-    setResourceFilter('all');
-  };
-
-  // Filtrar reservas
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) => {
-      if (statusFilter !== 'all' && booking.status !== statusFilter) {
-        return false;
-      }
-
-      if (resourceFilter !== 'all' && booking.resourceId !== resourceFilter) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [bookings, statusFilter, resourceFilter]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'completed':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'cancelled':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      case 'no_show':
-        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+  const handleApprove = (id: string, resourceName: string) => {
+    if (confirm(`Aprovar reserva de "${resourceName}"?`)) {
+      approveMutation.mutate(id);
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      confirmed: 'Confirmado',
-      completed: 'Concluído',
-      cancelled: 'Cancelado',
-      no_show: 'Não Compareceu',
+  const handleReject = (id: string, resourceName: string) => {
+    if (confirm(`Rejeitar reserva de "${resourceName}"?\n\nEsta ação não pode ser desfeita.`)) {
+      rejectMutation.mutate(id);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr + 'T00:00:00');
+      return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges = {
+      pending: { label: 'Aguardando', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: Clock },
+      confirmed: { label: 'Aprovada', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle },
+      rejected: { label: 'Rejeitada', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', icon: XCircle },
+      cancelled: { label: 'Cancelada', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: XCircle },
     };
-    return labels[status] || status;
+
+    const badge = badges[status as keyof typeof badges] || badges.pending;
+    const Icon = badge.icon;
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+        <Icon className="h-3 w-3" />
+        {badge.label}
+      </span>
+    );
   };
 
   if (isLoading) {
-    return <div className="text-center py-12">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Erro ao carregar reservas</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reservas de Recursos</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie todas as reservas de espaços e recursos
-          </p>
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Reservas de Salas
+          </h1>
+          
+          {/* Indicador de Conexão WebSocket */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            {isConnected && isSubscribed ? (
+              <>
+                <Wifi className="h-4 w-4 text-green-500 dark:text-green-400" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                  Tempo Real Ativo
+                </span>
+                <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse" />
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Desconectado
+                </span>
+              </>
+            )}
+          </div>
         </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Reserva
-        </Button>
+        <p className="text-gray-600 dark:text-gray-400">
+          Gerencie as solicitações de reserva de recursos do seu estabelecimento
+        </p>
       </div>
 
       {/* Filtros */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-semibold">Filtros</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select
-                id="status-filter"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={[
-                  { value: 'all', label: 'Todos' },
-                  { value: 'scheduled', label: 'Agendado' },
-                  { value: 'confirmed', label: 'Confirmado' },
-                  { value: 'completed', label: 'Concluído' },
-                  { value: 'cancelled', label: 'Cancelado' }
-                ]}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date-filter">Data</Label>
-              <Input
-                id="date-filter"
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="resource-filter">Recurso</Label>
-              <Select
-                id="resource-filter"
-                value={resourceFilter}
-                onChange={setResourceFilter}
-                options={[
-                  { value: 'all', label: 'Todos' },
-                  ...resources.map((resource) => ({
-                    value: resource.id,
-                    label: resource.name
-                  }))
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-muted-foreground">
-              Mostrando {filteredBookings.length} de {bookings.length} reservas
-            </p>
-            <Button variant="outline" onClick={handleClearFilters}>
-              Limpar filtros
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-6 flex gap-2 flex-wrap">
+        <button
+          onClick={() => setFilter('pending')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'pending'
+              ? 'bg-yellow-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Aguardando ({pendingCount})
+        </button>
+        <button
+          onClick={() => setFilter('approved')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'approved'
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Aprovadas ({approvedCount})
+        </button>
+        <button
+          onClick={() => setFilter('rejected')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'rejected'
+              ? 'bg-red-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Rejeitadas ({rejectedCount})
+        </button>
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'all'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Todas ({resourceBookings.length})
+        </button>
+      </div>
 
       {/* Lista de Reservas */}
-      <Card>
-        <CardContent className="p-0">
-          {filteredBookings.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {bookings.length === 0
-                  ? 'Nenhuma reserva cadastrada'
-                  : 'Nenhuma reserva encontrada com os filtros selecionados'}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Recurso</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Duração</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredBookings.map((booking) => {
-                    console.log({booking});
-                    
-                    const duration = booking.endTime && booking.scheduledTime
-                      ? `${parseInt(booking.endTime.split(':')[0]) - parseInt(booking.scheduledTime.split(':')[0])}h`
-                      : '-';
-                    
-                    // Calcular totalPrice baseado em durationMinutes e hourlyRate
-                    const totalPrice = booking.resource?.isFree 
-                      ? 0 
-                      : (booking.durationMinutes / 60) * (booking.resource?.hourlyRate || 0);
+      {filteredBookings.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <Calendar className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">
+            {filter === 'pending'
+              ? 'Nenhuma solicitação pendente no momento'
+              : 'Nenhuma reserva encontrada'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredBookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {booking.resource?.name || 'Recurso'}
+                    </h3>
+                    {getStatusBadge(booking.status)}
+                  </div>
+                  {booking.resource?.description && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      {booking.resource.description}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-                    return (
-                      <TableRow key={booking.id}>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">
-                              {format(new Date(booking.scheduledDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                            </div>
-                            <div className="text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {booking.scheduledTime} - {booking.endTime}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">{booking.resource?.name}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">{booking.customer?.name}</div>
-                            <div className="text-muted-foreground">{booking.customer?.phone}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{duration}</TableCell>
-                        <TableCell className="text-sm">
-                          {booking.resource?.isFree ? (
-                            <span className="text-green-600 font-medium">Grátis</span>
-                          ) : (
-                            `R$ ${totalPrice.toFixed(2)}`
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                            {getStatusLabel(booking.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              onClick={() => handleEdit(booking)}
-                              disabled={booking.status === 'cancelled' || booking.status === 'completed'}
-                              title="Editar"
-                              variant="outline"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              onClick={() => completeMutation.mutate(booking.id)}
-                              disabled={booking.status !== 'confirmed'}
-                              title="Concluir"
-                              variant="outline"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              onClick={() => cancelMutation.mutate(booking.id)}
-                              disabled={booking.status === 'cancelled' || booking.status === 'completed'}
-                              title="Cancelar"
-                              variant="outline"
-                              className="text-destructive"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Data e Horário */}
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm">
+                    {formatDate(booking.scheduledDate)}
+                  </span>
+                </div>
 
-      <ResourceBookingForm
-        open={formOpen}
-        onClose={handleCloseForm}
-        booking={editingBooking}
-      />
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm">
+                    {booking.scheduledTime} ({booking.durationMinutes} min)
+                  </span>
+                </div>
+
+                {/* Cliente */}
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <User className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm">{booking.customer?.name}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm">{booking.customer?.phone}</span>
+                </div>
+
+                {/* Comodidades */}
+                {booking.resource?.amenities && booking.resource.amenities.length > 0 && (
+                  <div className="flex items-start gap-2 text-gray-700 dark:text-gray-300 md:col-span-2">
+                    <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-500 mt-0.5" />
+                    <div className="flex flex-wrap gap-1">
+                      {booking.resource.amenities.map((amenity, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs rounded"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Preço */}
+                {!booking.resource?.isFree && (
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <DollarSign className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-sm font-medium">
+                      {formatPrice(
+                        (booking.resource?.hourlyRate || 0) *
+                          (booking.durationMinutes / 60)
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Observações */}
+              {booking.notes && (
+                <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Observações:</span> {booking.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Data da solicitação */}
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                Solicitado em {format(new Date(booking.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </div>
+
+              {/* Botões de Ação */}
+              {booking.status === 'pending' && (
+                <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => handleApprove(booking.id, booking.resource?.name || 'Recurso')}
+                    disabled={approveMutation.isPending}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {approveMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Aprovar Reserva
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleReject(booking.id, booking.resource?.name || 'Recurso')}
+                    disabled={rejectMutation.isPending}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {rejectMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4" />
+                        Rejeitar
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Informação de status para aprovadas/rejeitadas */}
+              {booking.status === 'confirmed' && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Reserva confirmada e lembretes agendados</span>
+                  </div>
+                </div>
+              )}
+
+              {booking.status === 'rejected' && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+                    <XCircle className="h-4 w-4" />
+                    <span>Reserva rejeitada - horário liberado para novas solicitações</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

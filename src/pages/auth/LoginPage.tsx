@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../stores/authStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('jose@barbearia.com');
@@ -72,6 +73,16 @@ export default function LoginPage() {
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>Credenciais de teste:</p>
             <p className="font-mono text-xs mt-1">jose@barbearia.com / senha123</p>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Link 
+              to="/admin/login"
+              className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              <Shield className="h-4 w-4" />
+              Acessar Painel Admin
+            </Link>
           </div>
         </CardContent>
       </Card>

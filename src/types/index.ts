@@ -76,7 +76,7 @@ export interface Appointment {
   scheduledTime: string; // HH:mm
   endTime?: string; // HH:mm - Obrigatório para recursos
   durationMinutes: number;
-  status: 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'rejected';
   notes?: string;
   reminderSentAt?: string;
   reminderConfirmed: boolean;
@@ -152,3 +152,29 @@ export interface CreateResourceDto {
 
 // Resource Bookings são tratados como Appointments com resourceId
 // Não existe entidade separada no backend
+
+// Chatbot
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt: string;
+  metadata?: any;
+}
+
+export interface Conversation {
+  id: string;
+  establishmentId: string;
+  userId?: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+}
+
+export interface CreateChatMessageDto {
+  conversationId?: string;
+  message: string;
+  establishmentId: string;
+}

@@ -51,8 +51,8 @@ export function EditAppointmentForm({ establishmentId, open, onOpenChange, appoi
   useEffect(() => {
     if (appointment) {
       setCustomerId(appointment.customerId);
-      setProfessionalId(appointment.professionalId);
-      setServiceId(appointment.serviceId);
+      setProfessionalId(appointment.professionalId ?? "");
+      setServiceId(appointment.serviceId ?? "");
       setScheduledDate(appointment.scheduledDate);
       setScheduledTime(appointment.scheduledTime);
       setDurationMinutes(appointment.durationMinutes);
@@ -67,6 +67,13 @@ export function EditAppointmentForm({ establishmentId, open, onOpenChange, appoi
       setDurationMinutes(Number(selectedService.durationMinutes));
     }
   }, [selectedService, appointment]);
+  
+  // Limpar horário ao mudar profissional (exceto no carregamento inicial)
+  useEffect(() => {
+    if (appointment && professionalId !== appointment.professionalId) {
+      setScheduledTime("");
+    }
+  }, [professionalId, appointment]);
 
   const qc = useQueryClient();
   const updateMutation = useMutation({
@@ -92,7 +99,7 @@ export function EditAppointmentForm({ establishmentId, open, onOpenChange, appoi
   // Buscar horários de funcionamento
   const { data: businessHours = [] } = useQuery({
     queryKey: ["businessHours", establishmentId],
-    queryFn: () => businessHoursApi.getAll(establishmentId),
+    queryFn: () => businessHoursApi.getAll(),
     enabled: !!establishmentId && open,
   });
 
@@ -102,7 +109,7 @@ export function EditAppointmentForm({ establishmentId, open, onOpenChange, appoi
 
     const dayOfWeek = new Date(scheduledDate + "T00:00:00").getDay();
     const dayHours = businessHours.find(
-      (bh) => bh.dayOfWeek === dayOfWeek && bh.isActive
+      (bh) => bh.dayOfWeek === dayOfWeek && bh.isOpen
     );
 
     const openTime = dayHours?.openTime || "09:00";
@@ -233,7 +240,8 @@ export function EditAppointmentForm({ establishmentId, open, onOpenChange, appoi
                 value={scheduledTime}
                 onChange={setScheduledTime}
                 options={timeOptions}
-                placeholder="Selecione"
+                placeholder={professionalId ? "Selecione um horário" : "Escolha primeiro o profissional"}
+                disabled={!professionalId}
               />
             </div>
           </div>

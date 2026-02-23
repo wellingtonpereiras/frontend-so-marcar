@@ -31,7 +31,14 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 // Interceptor para adicionar token JWT
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // Verifica se é uma rota admin
+    const isAdminRoute = config.url?.includes('/admin/');
+    
+    // Usa o token apropriado
+    const token = isAdminRoute 
+      ? localStorage.getItem('adminToken') 
+      : localStorage.getItem('token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

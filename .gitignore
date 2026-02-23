@@ -22,3 +22,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel
+.vercel
+
+# Environment variables (NEVER commit these)
+.env
+.env.production
+.env.staging
+# BUT keep .env.example for reference
+
+# OS files
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Build info
+*.tsbuildinfo
+.cache/

@@ -16,8 +16,10 @@ import {
   Sun,
   DoorOpen,
   CalendarCheck,
+  MessageSquare,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ChatWidget } from '../chatbot/ChatWidget';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -40,6 +42,7 @@ export default function DashboardLayout() {
     { name: 'Profissionais', href: '/professionals', icon: UserCircle },
     { name: 'Serviços', href: '/services', icon: Scissors },
     { name: 'Horários', href: '/business-hours', icon: Clock },
+    { name: 'Assistente IA', href: '/chatbot', icon: MessageSquare },
   ];
 
   return (
@@ -50,7 +53,7 @@ export default function DashboardLayout() {
           <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400">Só Marcar</h1>
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors border-none"
             title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
           >
             {theme === 'dark' ? (
@@ -141,6 +144,9 @@ export default function DashboardLayout() {
       <main className="ml-64 p-8">
         <Outlet />
       </main>
+      
+      {/* Chat Widget Flutuante */}
+      <ChatWidget />
     </div>
   );
 }

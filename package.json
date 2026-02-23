@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:analyze": "tsc -b && vite build --mode analyze",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-size": "node scripts/check-bundle-size.js",
+    "pre-deploy": "bash scripts/pre-deploy.sh"
   },
   "dependencies": {
     "@shadcn/ui": "^0.0.4",
@@ -24,6 +27,7 @@
     "react-is": "^19.2.1",
     "react-router-dom": "^7.10.1",
     "recharts": "^3.5.1",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.9"

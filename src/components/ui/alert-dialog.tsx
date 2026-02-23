@@ -13,7 +13,7 @@ export function AlertDialog({ open, onOpenChange, children }: AlertDialogProps) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70"
         onClick={() => onOpenChange(false)}
       />
       <div className="relative z-50">{children}</div>
@@ -30,7 +30,7 @@ export function AlertDialogContent({ children, className }: AlertDialogContentPr
   return (
     <div
       className={cn(
-        'bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6',
+        'bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full mx-4 p-6 border border-gray-200 dark:border-gray-700',
         className
       )}
     >
@@ -52,7 +52,7 @@ interface AlertDialogTitleProps {
 }
 
 export function AlertDialogTitle({ children }: AlertDialogTitleProps) {
-  return <h2 className="text-lg font-semibold text-gray-900">{children}</h2>;
+  return <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{children}</h2>;
 }
 
 interface AlertDialogDescriptionProps {
@@ -60,7 +60,7 @@ interface AlertDialogDescriptionProps {
 }
 
 export function AlertDialogDescription({ children }: AlertDialogDescriptionProps) {
-  return <p className="text-sm text-gray-600 mt-2">{children}</p>;
+  return <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{children}</p>;
 }
 
 interface AlertDialogFooterProps {
@@ -88,8 +88,8 @@ export function AlertDialogAction({
     'px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   const variantStyles =
     variant === 'destructive'
-      ? 'bg-red-600 text-white hover:bg-red-700'
-      : 'bg-primary-600 text-white hover:bg-primary-700';
+      ? 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
+      : 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800';
 
   return (
     <button
@@ -111,7 +111,7 @@ export function AlertDialogCancel({ children, onClick }: AlertDialogCancelProps)
   return (
     <button
       onClick={onClick}
-      className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+      className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
     >
       {children}
     </button>

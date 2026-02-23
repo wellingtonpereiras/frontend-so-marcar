@@ -44,6 +44,12 @@ export function AppointmentForm({ establishmentId, open, onOpenChange }: Props) 
     React.useEffect(() => {
       if (selectedService) setDurationMinutes(Number(selectedService.durationMinutes));
     }, [selectedService]);
+    
+    // Limpar horário ao mudar profissional
+    React.useEffect(() => {
+      setScheduledTime("");
+    }, [professionalId]);
+    
   const [scheduledDate, setScheduledDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [scheduledTime, setScheduledTime] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
@@ -80,7 +86,7 @@ export function AppointmentForm({ establishmentId, open, onOpenChange }: Props) 
   // Buscar horários de funcionamento
   const { data: businessHours = [] } = useQuery({
     queryKey: ["businessHours", establishmentId],
-    queryFn: () => businessHoursApi.getAll(establishmentId),
+    queryFn: () => businessHoursApi.getAll(),
     enabled: !!establishmentId,
   });
 
@@ -93,7 +99,7 @@ export function AppointmentForm({ establishmentId, open, onOpenChange }: Props) 
     
     // Buscar horário de funcionamento para o dia selecionado
     const dayHours = businessHours.find(
-      (bh) => bh.dayOfWeek === dayOfWeek && bh.isActive
+      (bh) => bh.dayOfWeek === dayOfWeek && bh.isOpen
     );
     
     // Se não houver horário configurado, usa padrão 09:00-18:00
@@ -192,6 +198,7 @@ export function AppointmentForm({ establishmentId, open, onOpenChange }: Props) 
                 onChange={setScheduledTime}
                 options={timeOptions}
                 placeholder={professionalId ? "Selecione um horário" : "Escolha primeiro o profissional"}
+                disabled={!professionalId}
               />
               {timeOptions.length === 0 && (
                 <p className="text-xs text-muted-foreground">Nenhum horário disponível para os filtros selecionados.</p>

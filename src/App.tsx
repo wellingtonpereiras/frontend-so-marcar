@@ -17,6 +17,11 @@ import CustomersPage from './pages/dashboard/CustomersPage';
 import BusinessHoursPage from './pages/dashboard/BusinessHoursPage';
 import ResourcesPage from './pages/dashboard/ResourcesPage';
 import ResourceBookingsPage from './pages/dashboard/ResourceBookingsPage';
+import ChatbotPage from './pages/dashboard/ChatbotPage';
+
+// Admin Pages
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
 // Layout
 import DashboardLayout from './components/common/DashboardLayout';
@@ -44,6 +49,10 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
 
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+
           {/* Protected Routes */}
           <Route
             path="/"
@@ -62,6 +71,7 @@ function App() {
             <Route path="business-hours" element={<BusinessHoursPage />} />
             <Route path="resources" element={<ResourcesPage />} />
             <Route path="resource-bookings" element={<ResourceBookingsPage />} />
+            <Route path="chatbot" element={<ChatbotPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="change-password" element={<ChangePasswordPage />} />
           </Route>
