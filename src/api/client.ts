@@ -1,7 +1,14 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
+// Garantir que use a variável de ambiente em produção
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+
+// Debug: remover após verificar que funciona em produção
+if (typeof window !== 'undefined') {
+  console.log('🌐 API URL configurada:', API_URL);
+  console.log('📍 Ambiente:', import.meta.env.MODE);
+}
 
 export const api = axios.create({
   baseURL: API_URL,
