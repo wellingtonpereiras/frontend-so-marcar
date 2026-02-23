@@ -17,6 +17,20 @@ export const authApi = {
     return data;
   },
 
+  // Atualizar dados do estabelecimento (apenas para OWNER)
+  updateEstablishment: async (updates: {
+    name?: string;
+    slug?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    businessType?: string;
+    operationMode?: 'services' | 'spaces' | 'both';
+  }) => {
+    const { data } = await api.patch('/establishments/my', updates);
+    return data;
+  },
+
   changePassword: async (passwords: { oldPassword: string; newPassword: string }) => {
     const { data } = await api.post('/auth/change-password', passwords);
     return data;
@@ -27,3 +41,4 @@ export const authApi = {
     return data;
   },
 };
+

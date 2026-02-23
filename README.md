@@ -1,6 +1,128 @@
-# React + TypeScript + Vite
+# 🗓️ só marcar - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de agendamentos e gestão para estabelecimentos. Frontend moderno construído com React, Vite e TypeScript.
+
+[![Deploy](https://img.shields.io/badge/deploy-vercel-black)](https://vercel.com)
+[![TypeScript](https://img.shields.io/badge/typescript-5.9-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/react-19.2-61dafb)](https://reactjs.org/)
+
+## ✨ Features
+
+- 📅 **Agendamentos**: Gerenciar appointments e reservas de recursos
+- 👥 **Multi-tenant**: Suporte a múltiplos estabelecimentos
+- ⚡ **Tempo Real**: WebSocket para atualizações instantâneas
+- 📊 **Dashboard**: Métricas e analytics visuais
+- 👨‍💼 **Admin Panel**: Gestão completa de estabelecimentos
+- 🌙 **Dark Mode**: Tema escuro suportado
+- 📱 **PWA Ready**: Progressive Web App
+- 🔒 **Seguro**: Autenticação JWT, headers de segurança
+
+## 🚀 Quick Start
+
+```bash
+# Clone o repositório
+git clone https://github.com/seu-usuario/so-marcar-frontend.git
+cd so-marcar-frontend
+
+# Instalar dependências
+npm install
+
+# Configurar ambiente
+cp .env.example .env
+# Editar .env com suas configurações
+
+# Iniciar dev server
+npm run dev
+
+# Abrir http://localhost:5173
+```
+
+## 📋 Tech Stack
+
+### Core
+- **React 19** - UI library
+- **Vite 7** - Build tool & dev server
+- **TypeScript 5.9** - Type safety
+- **TailwindCSS 4** - Styling
+
+### State Management
+- **TanStack Query v5** - Server state
+- **Zustand** - Client state (auth)
+
+### UI Components
+- **Shadcn/UI** - Component library
+- **Lucide React** - Icons
+- **Recharts** - Charts & graphs
+- **react-hot-toast** - Notifications
+
+### Real-time
+- **Socket.IO Client** - WebSocket connections
+
+## 🔧 Scripts Disponíveis
+
+```bash
+# Desenvolvimento
+npm run dev              # Inicia dev server (porta 5173)
+
+# Build
+npm run build            # Build para produção
+npm run build:analyze    # Build com bundle analyzer
+
+# Quality
+npm run lint             # ESLint
+
+# Preview
+npm run preview          # Preview do build local
+
+# Deploy
+npm run pre-deploy       # Checks pré-deploy
+npm run check-size       # Verifica bundle size
+```
+
+## 🌐 Variáveis de Ambiente
+
+```env
+# API Backend
+VITE_API_URL=https://so-marcar-api.onrender.com/api/v1
+
+# WebSocket
+VITE_WS_URL=https://so-marcar-api.onrender.com
+```
+
+## 🚀 Deploy
+
+### Vercel (Recomendado)
+
+```bash
+npm i -g vercel
+vercel --prod
+```
+
+Ver [DEPLOY.md](DEPLOY.md) para guia completo.
+
+## 📚 Documentação
+
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Arquitetura & Infraestrutura
+- [DEPLOY.md](DEPLOY.md) - Guia de deploy
+- [MONITORING.md](docs/MONITORING.md) - Observabilidade
+- [PERFORMANCE.md](docs/PERFORMANCE.md) - Otimizações
+- [SECURITY.md](docs/SECURITY.md) - Segurança
+
+## 📊 Performance
+
+- **LCP**: < 2.5s ✅
+- **FID**: < 100ms ✅
+- **CLS**: < 0.1 ✅
+- **Bundle Size**: < 500KB ✅
+
+## 📄 License
+
+MIT License
+
+---
+
+Made with ❤️ by só marcar team
+
 
 Currently, two official plugins are available:
 
